@@ -363,7 +363,7 @@ export function ecranPlan(etat) {
   const legende = `<div class="legende" aria-hidden="true">${rects.filter((r) => r.zone.numero !== null && r.zone.numero <= 7).map((r) => `<span style="--c:${COULEUR_ZONE(r.zone.numero)}">${h(r.zone.numero)} ${h(r.zone.nom)}</span>`).join('')}</div>`;
 
   const equivalent = `<details class="equivalent"><summary>Le plan en liste (zones et salles)</summary>
-    <ul class="liste">${modele.zones.map((z) => `<li class="ligne"><div class="heure">${h(z.numero ?? '•')}</div><div class="corps"><button class="filtre" type="button" data-action="zone" data-valeur="${attr(z.numero ?? z.nom)}">${h(z.nom)}</button><div class="meta"><span>${z.salles.length ? z.salles.map((s) => h(s.nom)).join(', ') : 'salles à venir'}</span></div></div><div></div></li>`).join('')}</ul>
+    <ul class="liste">${modele.zones.map((z) => `<li class="ligne"><div class="heure">${h(z.numero ?? '·')}</div><div class="corps"><button class="filtre" type="button" data-action="zone" data-valeur="${attr(z.numero ?? z.nom)}">${h(z.nom)}</button><div class="meta"><span>${z.salles.length ? z.salles.map((s) => h(s.nom)).join(', ') : 'salles à venir'}</span></div></div><div></div></li>`).join('')}</ul>
   </details>`;
 
   return `${entete('Plan du festival', salleAllumeeObj ? h(salleAllumeeObj.nom) : 'Touchez une zone, ou cherchez une salle ou une école')}
