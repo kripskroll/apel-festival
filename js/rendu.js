@@ -49,21 +49,40 @@ const heureTexte = (v) => { const m = heureEnMinutes(v); return m === null ? v |
 const boutonRetirer = (cle, libelle) => `<button class="etoile" type="button" data-action="retirer" data-cle="${attr(cle)}" aria-label="Retirer de ma visite : ${attr(libelle)}">${icone('fermer', 20)}</button>`;
 const coche = (entree) => `<div class="coche"><input type="checkbox" data-action="fait" data-cle="${attr(entree.cle)}" ${entree.fait ? 'checked' : ''} aria-label="Marquer comme fait"></div>`;
 
-function ligneEvenement(etat, ev, { avecHeure = true, chevauche = false, entree = null } = {}) {
+// Ma visite est une frise : une colonne d'horaires, puis un rail vertical dont
+// chaque point est la case « fait ». Deux usages pour une seule gouttière, ce qui
+// est la seule façon de montrer l'heure sans voler de largeur au titre sur un
+// téléphone. Le point reste une vraie case à cocher (étiquette, clavier, `change`) ;
+// seule son apparence change, et une cible tactile invisible lui donne ses 40 px.
+const pointChrono = (entree, { petit = false } = {}) => `<label class="chrono-point${petit ? ' petit' : ''}">
+    <input type="checkbox" data-action="fait" data-cle="${attr(entree.cle)}" ${entree.fait ? 'checked' : ''} aria-label="Marquer comme fait">
+    <span class="cible" aria-hidden="true"></span></label>`;
+
+// La colonne des horaires : début en gros, fin en dessous. Les deux se lisent comme
+// une plage sans coûter la largeur qu'un « 9 h 45 – 10 h 15 » sur une ligne prendrait.
+function colonneHeure(ev) {
+  const debut = ev && ev.debut !== null && ev.debut !== undefined ? minutesEnHeure(ev.debut) : '';
+  const fin = ev && ev.fin !== null && ev.fin !== undefined ? minutesEnHeure(ev.fin) : '';
+  if (!debut) return '<div class="rail-heure"></div>';
+  return `<div class="rail-heure"><span class="rail-debut">${h(debut)}</span>${fin ? `<span class="rail-fin">${h(fin)}</span>` : ''}</div>`;
+}
+
+function ligneEvenement(etat, ev, { avecHeure = true, chrono = false, chevauche = false, entree = null } = {}) {
   const meta = [h(ev.format)];
   if (ev.fin !== null && ev.debut !== null) meta.push(`${ev.fin - ev.debut} min`);
   if (ev.intervenantsTexte) meta.push(h(ev.intervenantsTexte));
   const alerte = entree && entree.alerte && !entree.alerte.vue
     ? `<span class="alerte-ico">${icone('alerte', 15)}${h(texteAlerte(entree.alerte))}</span>` : '';
   return `<li class="ligne${chevauche ? ' chevauche' : ''}${entree && entree.fait ? ' fait' : ''}">
-    ${avecHeure ? `<div class="heure">${h(minutesEnHeure(ev.debut) || '—')}</div>` : (entree ? coche(entree) : '<div class="marque"></div>')}
+    ${chrono ? `${colonneHeure(ev)}${pointChrono(entree)}`
+    : avecHeure ? `<div class="heure">${h(minutesEnHeure(ev.debut) || '—')}</div>` : (entree ? coche(entree) : '<div class="marque"></div>')}
     <div class="corps"><a href="${lienEvenement(ev.cle)}">${h(ev.titre)}</a>
       <div class="meta">${salleHtml(ev.salle, ev.salleAVenir)}<span>${meta.join(', ')}</span>${ev.secteur ? `<span class="puce neutre">${h(secteurCourt(ev.secteur))}</span>` : ''}${alerte}</div></div>
     ${entree ? boutonRetirer(ev.cle, ev.titre) : etoile(etat, ev, ev.titre)}
   </li>`;
 }
 
-function ligneExposant(etat, ex, { entree = null } = {}) {
+function ligneExposant(etat, ex, { entree = null, chrono = false } = {}) {
   const meta = [];
   if (ex.stand) meta.push(`<span>stand ${h(ex.stand)}</span>`);
   if (ex.organisation && ex.organisation !== ex.type) meta.push(`<span class="puce">${h(ex.organisation)}</span>`);
@@ -71,7 +90,8 @@ function ligneExposant(etat, ex, { entree = null } = {}) {
   const alerte = entree && entree.alerte && !entree.alerte.vue
     ? `<span class="alerte-ico">${icone('alerte', 15)}${h(texteAlerte(entree.alerte))}</span>` : '';
   return `<li class="ligne${entree && entree.fait ? ' fait' : ''}">
-    ${entree ? coche(entree) : `<div class="marque">${icone('exposants', 18)}</div>`}
+    ${chrono ? `<div class="rail-heure"></div>${pointChrono(entree, { petit: true })}`
+    : entree ? coche(entree) : `<div class="marque">${icone('exposants', 18)}</div>`}
     <div class="corps"><a href="${lienExposant(ex.cle)}">${h(ex.nom)}</a>
       <div class="meta">${salleHtml(ex.salle, ex.salleAVenir)}${meta.join('')}${alerte}</div></div>
     ${entree ? boutonRetirer(ex.cle, ex.nom) : etoile(etat, ex, ex.nom)}
@@ -421,9 +441,9 @@ export function ecranVisite(etat) {
   return `${entete('Ma visite', h(sous))}
   ${lignes.length ? `${chev.length ? `<p class="avert">${icone('alerte', 19)}<span>${h(minutesEnHeure(chev[0].objet.debut))} : deux événements en même temps. Gardez-en un.</span></p>` : ''}
   <h2 class="titre-section">Ma matinée</h2>
-  <ul class="liste carte">${lignes.map((l) => {
-    if (!l.objet) return `<li class="ligne"><div class="marque"></div><div class="corps"><span>${h(l.entree.cle)}</span><div class="meta"><span class="puce alerte">n'est plus au programme</span></div></div>${boutonRetirer(l.entree.cle, l.entree.cle)}</li>`;
-    return l.genre === 'evenement' ? ligneEvenement(etat, l.objet, { avecHeure: false, chevauche: l.chevauche, entree: l.entree }) : ligneExposant(etat, l.objet, { entree: l.entree });
+  <ul class="liste carte chrono">${lignes.map((l) => {
+    if (!l.objet) return `<li class="ligne"><div class="rail-heure"></div>${pointChrono(l.entree, { petit: true })}<div class="corps"><span>${h(l.entree.cle)}</span><div class="meta"><span class="puce alerte">n'est plus au programme</span></div></div>${boutonRetirer(l.entree.cle, l.entree.cle)}</li>`;
+    return l.genre === 'evenement' ? ligneEvenement(etat, l.objet, { chrono: true, chevauche: l.chevauche, entree: l.entree }) : ligneExposant(etat, l.objet, { chrono: true, entree: l.entree });
   }).join('')}</ul>`
     : `<p class="vide">Rien pour l'instant. Touchez l'étoile sur un événement ou un exposant pour construire votre matinée.</p>
   <div class="boutons"><a class="bouton" href="#/programme">${icone('programme', 19)}Le programme</a><a class="bouton secondaire" href="#/exposants">${icone('exposants', 19)}Les exposants</a></div>`}

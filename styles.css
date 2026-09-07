@@ -255,6 +255,51 @@ main { min-height: 60vh; }
 .coche { width: 26px; height: 26px; display: grid; place-items: center; padding-top: 2px; }
 .coche input { width: 22px; height: 22px; accent-color: var(--bleu); margin: 0; }
 
+/* ------------------------------------------------------------ la frise de Ma visite
+
+   Quatre colonnes : horaires, rail, corps, bouton retirer. La colonne d'horaires
+   est volontairement étroite (le début en gros, la fin dessous) pour laisser au
+   titre la largeur dont il a besoin sur un téléphone. Le rail relie les points ;
+   chaque point est la case « fait », pleine une fois cochée. */
+
+.chrono .ligne { grid-template-columns: 4.1em 18px 1fr auto; gap: 0 9px; }
+.rail-heure {
+  font-family: var(--display); font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+  display: flex; flex-direction: column; align-items: flex-end; padding-top: 1px; line-height: 1.15;
+}
+.rail-debut { font-weight: 800; font-size: 1.02rem; color: var(--orange); }
+.rail-fin { font-weight: 600; font-size: 0.78rem; color: var(--encre-2); margin-top: 1px; }
+
+.chrono-point { position: relative; width: 18px; height: 22px; display: grid; place-items: center; }
+.chrono-point input {
+  appearance: none; -webkit-appearance: none; margin: 0; cursor: pointer;
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--orange); background: var(--carte);
+}
+.chrono-point.petit input { width: 10px; height: 10px; border-color: var(--encre-2); }
+.chrono-point input:checked { background: var(--bleu); border-color: var(--bleu); }
+.chrono-point input:focus-visible { outline: 2px solid var(--bleu); outline-offset: 3px; }
+/* Cible tactile de 40 px autour d'un point qui n'en fait que 14 : le doigt vise
+   large, l'œil voit fin. Décalée vers la gouttière pour ne pas manger le titre. */
+.chrono-point .cible { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; transform: translate(-58%, -50%); }
+
+/* Les deux segments du rail : au-dessus et au-dessous du point. Les -16 px vont
+   chercher le bord de la ligne voisine (padding 15 px + 1 px de filet), de sorte
+   que les segments se rejoignent d'un point à l'autre. */
+.chrono-point::before, .chrono-point::after {
+  content: ''; position: absolute; left: 50%; margin-left: -1px; width: 2px; background: var(--trait);
+}
+.chrono-point::before { top: -16px; height: 20px; }
+.chrono-point::after { top: 18px; bottom: -16px; }
+.chrono .ligne:first-child .chrono-point::before,
+.chrono .ligne:last-child .chrono-point::after { content: none; }
+.chrono .ligne.fait .rail-debut { color: var(--encre-2); }
+
+@media (max-width: 360px) {
+  .chrono .ligne { grid-template-columns: 3.8em 16px 1fr auto; gap: 0 7px; }
+  .rail-debut { font-size: 0.95rem; }
+}
+
 /* ------------------------------------------------------------ fiches */
 
 .fiche h1 { font-size: clamp(1.7rem, 7vw, 2.15rem); margin: 4px 0 12px; }
