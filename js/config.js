@@ -12,7 +12,7 @@ export const CONFIG = {
   repo: 'apel-festival',
   urlPublique: 'https://kripskroll.github.io/apel-festival/',
   // Version de l'appli : change à chaque déploiement (bin/deploy.sh), pilote le cache du service worker.
-  version: '2026.09.07-cd22998',
+  version: '2026.09.07-57d897c',
   // Rafraîchissement des données (ms) et envoi des mesures (ms).
   intervalleDonnees: 60000,
   intervalleStats: 30000,

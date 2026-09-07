@@ -434,8 +434,16 @@ async function enregistrerServiceWorker() {
       if (!w) return;
       w.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) proposer(w); });
     });
+    // Le rechargement n'a de sens que lorsqu'une NOUVELLE version prend la main.
+    // À la toute première visite, le service worker s'installe et prend la main
+    // aussi : recharger là recharge la page sous les pieds du Visiteur.
     let recharge = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => { if (!recharge) { recharge = true; location.reload(); } });
+    const avaitUnControleur = Boolean(navigator.serviceWorker.controller);
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!avaitUnControleur || recharge) return;
+      recharge = true;
+      location.reload();
+    });
   } catch (e) { journal('service worker non enregistré', e); }
 }
 
