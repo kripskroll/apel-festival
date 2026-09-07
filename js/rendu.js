@@ -556,15 +556,30 @@ export function navigation(etat) {
 // n'est pas montré au Visiteur : il n'y peut rien, et l'appli affiche de toute
 // façon les dernières données connues. Il reste visible avec « ?debug » dans
 // l'URL, pour les Organisateurs et le dépannage.
+// La ligne de version. Elle répond, depuis l'appareil et sans outil, à « est-ce que
+// ce téléphone a bien la dernière version ? ». `versionAppli` est celle du code
+// chargé ; `versionSW` celle que le service worker sert. Un écart entre les deux,
+// c'est un cache périmé : on le montre au lieu de le taire.
+// À ne pas confondre avec `etat.version`, qui est l'empreinte des DONNÉES.
+function ligneVersion(etat) {
+  const { versionAppli, versionSW } = etat;
+  if (!versionAppli) return '';
+  const perime = versionSW && versionSW !== versionAppli;
+  return `<p class="version">${perime
+    ? `<span class="erreur">version ${h(versionAppli)} · cache périmé ${h(versionSW)}</span>`
+    : `version ${h(versionAppli)}`}</p>`;
+}
+
 export function piedDePage(etat) {
   const { derniereMaj, source, reseau, debug } = etat;
-  if (!derniereMaj) return '';
+  const version = ligneVersion(etat);
+  if (!derniereMaj) return version;
   const d = new Date(derniereMaj);
   const heure = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const jour = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   const lib = { script: 'tableur', gviz: 'classeur public', snapshot: 'version embarquée', cache: 'dernière version connue' }[source] || source;
   const panne = debug && reseau && reseau.enErreur ? ' · <span class="erreur">lecture en direct en échec, nouvel essai bientôt</span>' : '';
-  return `<p class="maj">Mis à jour le ${h(jour)} à ${h(heure)} (${h(lib)})${panne}</p>`;
+  return `<p class="maj">Mis à jour le ${h(jour)} à ${h(heure)} (${h(lib)})${panne}</p>${version}`;
 }
 
 // ---------------------------------------------------------------- aiguillage

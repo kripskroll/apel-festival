@@ -15,6 +15,9 @@ const stockage = (() => { try { localStorage.setItem('festival.test', '1'); loca
 const etat = {
   route: analyserRoute(location.hash),
   modele: construireModele({}), tables: null, version: null, source: null, derniereMaj: null, bandeau: '',
+  // Version du code chargé, et version que le service worker sert réellement.
+  // Les deux sont affichées en pied de page : leur écart révèle un cache périmé.
+  versionAppli: CONFIG.version, versionSW: null,
   visite: Visite.etatInitial(),
   ui: {
     rechercheProgramme: '', filtreSecteurProgramme: '', filtreFormat: '', filtrePublic: '',
@@ -420,6 +423,20 @@ function rechargerNouvelleVersion() {
   if (swEnAttente) swEnAttente.postMessage({ type: 'activer' });
   else location.reload();
 }
+// Demande au service worker quelle version il sert. Renvoie null s'il n'y en a
+// pas encore un aux commandes (première visite) ou s'il ne répond pas : dans ce
+// cas le pied de page n'affiche que la version du code, sans rien alléguer.
+async function versionServiceWorker() {
+  if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) return null;
+  return new Promise((resoudre) => {
+    const canal = new MessageChannel();
+    const minuteur = setTimeout(() => resoudre(null), 2000);
+    canal.port1.onmessage = (e) => { clearTimeout(minuteur); resoudre((e.data && e.data.version) || null); };
+    try { navigator.serviceWorker.controller.postMessage({ type: 'version' }, [canal.port2]); }
+    catch { clearTimeout(minuteur); resoudre(null); }
+  });
+}
+
 async function enregistrerServiceWorker() {
   if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
   try {
@@ -460,6 +477,7 @@ async function demarrer() {
   stats.noter('ouverture', initial ? initial.source : 'aucune', installee ? 'installee' : 'navigateur');
   appliquerRoute();
   enregistrerServiceWorker();
+  versionServiceWorker().then((v) => { etat.versionSW = v; el.pied.innerHTML = piedDePage(etat); });
   rafraichisseur.demarrer();
   verifierRappels();
   setInterval(verifierRappels, 30000);

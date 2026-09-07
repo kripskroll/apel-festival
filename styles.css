@@ -94,6 +94,11 @@ main { min-height: 60vh; }
 
 .maj { color: var(--encre-2); font-size: 0.8rem; text-align: center; margin: 32px 0 10px; line-height: 1.5; }
 .maj .erreur { color: var(--alerte); }
+/* Le numéro de build, discret mais sélectionnable : c'est ce qu'on lit à voix
+   haute au téléphone pour savoir si un appareil a bien reçu la dernière version. */
+.version { color: var(--encre-2); font-size: 0.68rem; text-align: center; margin: 0 0 10px; opacity: 0.75; font-variant-numeric: tabular-nums; }
+.maj + .version { margin-top: -6px; }
+.version .erreur { color: var(--alerte); opacity: 1; font-weight: 700; }
 
 .nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;

@@ -1,7 +1,7 @@
 // Service worker : l'appli entière en cache à l'installation (cache d'abord,
 // réseau pour mettre à jour) ; les données (snapshot) réseau d'abord, cache en
 // secours. La VERSION est réécrite par bin/deploy.sh à chaque publication.
-const VERSION = '2026.09.08-417f7c8';
+const VERSION = '2026.09.08-77926f0';
 const CACHE_APPLI = `festival-appli-${VERSION}`;
 const CACHE_DONNEES = 'festival-donnees';
 const FICHIERS = [
@@ -38,6 +38,10 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('message', (e) => {
   if (e.data && e.data.type === 'activer') self.skipWaiting();
+  // Le pied de page demande quelle version SERT réellement les fichiers. Si elle
+  // diffère de celle du code chargé, le téléphone tourne sur un cache périmé —
+  // c'est la seule façon de le voir depuis l'appareil, sans câble ni console.
+  if (e.data && e.data.type === 'version' && e.ports && e.ports[0]) e.ports[0].postMessage({ version: VERSION });
 });
 
 self.addEventListener('fetch', (e) => {
