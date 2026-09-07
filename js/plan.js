@@ -72,6 +72,16 @@ export function contenuZone(modele, zone) {
   };
 }
 
+// Ce qui se trouve dans une Salle précise : c'est ce qu'on veut voir quand on
+// touche une salle sur le plan, et non le contenu de toute sa Zone.
+export function contenuSalle(modele, salle) {
+  const dedans = (o) => normaliser(o.salle) === salle.cle;
+  return {
+    exposants: modele.exposants.filter(dedans).sort((a, b) => String(a.stand).localeCompare(String(b.stand), 'fr', { numeric: true }) || a.nom.localeCompare(b.nom, 'fr')),
+    evenements: modele.evenements.filter(dedans),
+  };
+}
+
 export function salleParNom(modele, nom) {
   const n = normaliser(nom);
   return modele.salles.find((s) => s.cle === n) || null;

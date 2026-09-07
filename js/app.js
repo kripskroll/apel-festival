@@ -23,6 +23,7 @@ const etat = {
   },
   reseau: { enErreur: false },
   maintenant: { jourJ: false, minutes: 0 },
+  debug: location.search.includes('debug'),
 };
 
 const stockageVisite = Visite.creerStockageVisite(stockage);

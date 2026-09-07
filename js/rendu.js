@@ -2,7 +2,7 @@
 // Aucun état caché dans le DOM ; les gestes modifient l'état puis re-rendent.
 import { SECTEURS, TYPES_EXPOSANT, FORMATS, NIVEAUX, minutesEnHeure, heureEnMinutes, contient, normaliser, publicInclut } from './donnees.js';
 import { contient as visiteContient, matinee, suggestions, questionsPour, texteAlerte, alertesNonVues, compte, finDe } from './visite.js';
-import { disposerZones, placerSalles, etendue, contenuZone, rechercherSurPlan, sallesDeVisite, salleParNom, phraseGuidage } from './plan.js';
+import { disposerZones, placerSalles, etendue, contenuZone, contenuSalle, rechercherSurPlan, sallesDeVisite, salleParNom, phraseGuidage } from './plan.js';
 import { icone, marque } from './icones.js';
 
 // ---------------------------------------------------------------- utilitaires
@@ -65,6 +65,7 @@ function ligneEvenement(etat, ev, { avecHeure = true, chevauche = false, entree 
 
 function ligneExposant(etat, ex, { entree = null } = {}) {
   const meta = [];
+  if (ex.stand) meta.push(`<span>stand ${h(ex.stand)}</span>`);
   if (ex.organisation && ex.organisation !== ex.type) meta.push(`<span class="puce">${h(ex.organisation)}</span>`);
   if (ex.sousTitre) meta.push(`<span>${h(ex.sousTitre.length > 64 ? `${ex.sousTitre.slice(0, 62)}…` : ex.sousTitre)}</span>`);
   const alerte = entree && entree.alerte && !entree.alerte.vue
@@ -321,16 +322,18 @@ export function ecranPlan(etat) {
   const resultat = ui.recherchePlan ? rechercherSurPlan(modele, ui.recherchePlan) : null;
   const allumee = resultat && resultat.salle ? resultat.salle.cle : (ui.salleAllumee ? normaliser(ui.salleAllumee) : null);
   const salleAllumeeObj = allumee ? modele.salles.find((s) => s.cle === allumee) : null;
+  // Une Zone explicitement touchée ouvre le panneau de la Zone ; une Salle
+  // touchée ouvre le panneau de cette Salle seule, et non de toute sa Zone.
   const zoneOuverte = ui.zoneOuverte !== null && ui.zoneOuverte !== undefined
-    ? modele.zones.find((z) => String(z.numero ?? z.nom) === String(ui.zoneOuverte))
-    : (salleAllumeeObj ? salleAllumeeObj.zone : null);
+    ? modele.zones.find((z) => String(z.numero ?? z.nom) === String(ui.zoneOuverte)) : null;
+  const zoneActive = zoneOuverte || (salleAllumeeObj ? salleAllumeeObj.zone : null);
   const salleDemandee = ui.salleAllumee && !salleAllumeeObj ? ui.salleAllumee : null;
 
   const svgZones = rects.map((r) => {
     const x0 = r.x + (r.zone.numero !== null ? 6 : 2);
     const lignes = couperNomZone(r.zone.nom, (r.x + r.w - 1 - x0) / 1.3);
     return `<g class="zone-g">
-      <rect class="zone-rect${zoneOuverte === r.zone ? ' active' : ''}" x="${co(r.x)}" y="${co(r.y)}" width="${co(r.w)}" height="${co(r.h)}" rx="2.4" fill="${COULEUR_ZONE(r.zone.numero)}" data-action="zone" data-valeur="${attr(r.zone.numero ?? r.zone.nom)}" tabindex="0" role="button" aria-label="Zone ${attr(r.zone.numero ?? '')} ${attr(r.zone.nom)}"/>
+      <rect class="zone-rect${zoneActive === r.zone ? ' active' : ''}" x="${co(r.x)}" y="${co(r.y)}" width="${co(r.w)}" height="${co(r.h)}" rx="2.4" fill="${COULEUR_ZONE(r.zone.numero)}" data-action="zone" data-valeur="${attr(r.zone.numero ?? r.zone.nom)}" tabindex="0" role="button" aria-label="Zone ${attr(r.zone.numero ?? '')} ${attr(r.zone.nom)}"/>
       <text class="zone-num" x="${co(r.x + 2.2)}" y="${co(r.y + 5)}">${h(r.zone.numero ?? '')}</text>
       ${lignes.map((l, i) => `<text class="zone-nom" x="${co(x0)}" y="${co(r.y + 4.4 + i * 2.7)}">${h(l)}</text>`).join('')}
     </g>`;
@@ -352,6 +355,7 @@ export function ecranPlan(etat) {
   }).join('');
 
   const contenu = zoneOuverte ? contenuZone(modele, zoneOuverte) : null;
+  const contenuDeLaSalle = !zoneOuverte && salleAllumeeObj ? contenuSalle(modele, salleAllumeeObj) : null;
   const guidage = resultat ? `<section class="guidage" aria-live="polite"><h2>${h(resultat.libelle)}</h2>
       <p><span class="ou">${h(resultat.nomSalle || 'salle à venir')}</span> — ${h(resultat.phrase)}</p>
       <div class="boutons">${resultat.exposant ? `<a class="bouton secondaire" href="${lienExposant(resultat.exposant.cle)}">Voir la fiche</a>${etoile(etat, resultat.exposant, resultat.exposant.nom)}` : ''}${resultat.evenement ? `<a class="bouton secondaire" href="${lienEvenement(resultat.evenement.cle)}">Voir l'événement</a>` : ''}</div>
@@ -387,6 +391,13 @@ export function ecranPlan(etat) {
   </div>
   ${legende}
   ${guidage}
+  ${contenuDeLaSalle ? `<section class="panneau-zone" aria-live="polite">
+    <h2>${h(salleAllumeeObj.nom)}</h2>
+    <p class="salles-de-la-zone">${contenuDeLaSalle.exposants.length ? `${contenuDeLaSalle.exposants.length} exposant${contenuDeLaSalle.exposants.length > 1 ? 's' : ''} dans cette salle` : "Aucun exposant dans cette salle pour l'instant"}${salleAllumeeObj.zone ? `, zone ${h(salleAllumeeObj.zone.numero ?? '')} ${h(salleAllumeeObj.zone.nom)}` : ''}</p>
+    ${contenuDeLaSalle.exposants.length ? `<ul class="liste">${contenuDeLaSalle.exposants.map((e) => ligneExposant(etat, e)).join('')}</ul>` : ''}
+    ${contenuDeLaSalle.evenements.length ? `<h3 class="titre-section">Événements dans cette salle</h3><ul class="liste">${contenuDeLaSalle.evenements.map((e) => ligneEvenement(etat, e)).join('')}</ul>` : ''}
+    ${salleAllumeeObj.zone ? `<div class="boutons"><button class="bouton secondaire" type="button" data-action="zone" data-valeur="${attr(salleAllumeeObj.zone.numero ?? salleAllumeeObj.zone.nom)}">Voir toute la zone ${h(salleAllumeeObj.zone.numero ?? '')} ${h(salleAllumeeObj.zone.nom)}</button></div>` : ''}
+  </section>` : ''}
   ${contenu ? `<section class="panneau-zone" aria-live="polite">
     <h2><span class="num">${h(zoneOuverte.numero ?? '')}</span>${h(zoneOuverte.nom)}</h2>
     ${contenu.salles.length ? `<p class="salles-de-la-zone">Salles : ${contenu.salles.map((s) => `<a href="${lienPlanSalle(s.nom)}">${h(s.nom)}</a>`).join(', ')}</p>` : '<p class="salles-de-la-zone">Salles à venir.</p>'}
@@ -521,14 +532,19 @@ export function navigation(etat) {
   return `<ul>${item('accueil', '#/', 'accueil', 'Accueil')}${item('plan', '#/plan', 'plan', 'Plan')}${item('exposants', '#/exposants', 'exposants', 'Exposants')}${item('programme', '#/programme', 'programme', 'Programme')}${item('visite', '#/visite', 'visite', 'Ma visite', badge)}</ul>`;
 }
 
+// La date de dernière mise à jour, discrètement. Un échec de lecture en direct
+// n'est pas montré au Visiteur : il n'y peut rien, et l'appli affiche de toute
+// façon les dernières données connues. Il reste visible avec « ?debug » dans
+// l'URL, pour les Organisateurs et le dépannage.
 export function piedDePage(etat) {
-  const { derniereMaj, source, reseau } = etat;
+  const { derniereMaj, source, reseau, debug } = etat;
   if (!derniereMaj) return '';
   const d = new Date(derniereMaj);
   const heure = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const jour = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   const lib = { script: 'tableur', gviz: 'classeur public', snapshot: 'version embarquée', cache: 'dernière version connue' }[source] || source;
-  return `<p class="maj">Mis à jour le ${h(jour)} à ${h(heure)} (${h(lib)})${reseau && reseau.enErreur ? ' · <span class="erreur">données en direct indisponibles, nouvel essai bientôt</span>' : ''}</p>`;
+  const panne = debug && reseau && reseau.enErreur ? ' · <span class="erreur">lecture en direct en échec, nouvel essai bientôt</span>' : '';
+  return `<p class="maj">Mis à jour le ${h(jour)} à ${h(heure)} (${h(lib)})${panne}</p>`;
 }
 
 // ---------------------------------------------------------------- aiguillage
