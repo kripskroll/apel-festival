@@ -12,8 +12,15 @@ export const CONFIG = {
   repo: 'apel-festival',
   urlPublique: 'https://kripskroll.github.io/apel-festival/',
   // Version de l'appli : change à chaque déploiement (bin/deploy.sh), pilote le cache du service worker.
-  version: '2026.09.08-77926f0',
+  version: '2026.09.08-18e4c53',
   // Rafraîchissement des données (ms) et envoi des mesures (ms).
+  // intervalleStats est à 180 s, pas 30 : le test de charge du 2026-09-08 a mesuré
+  // que l'écriture de l'onglet Stats plafonne vers 2,2 requêtes par seconde (le
+  // verrou du script sérialise), et qu'au-delà elle se dégrade en entraînant les
+  // lectures avec elle. À 300 téléphones, 30 s donne 10 req/s — 4,5 fois trop ;
+  // 120 s donne encore 2,5 ; 180 s donne 1,67, soit 24 % de marge. Ne pas baisser
+  // sans relire docs/test-de-charge.md : c'est le tiers le plus lourd de la charge,
+  // et retarder des mesures ne coûte rien au Visiteur, qui ne les voit jamais.
   intervalleDonnees: 60000,
-  intervalleStats: 30000,
+  intervalleStats: 180000,
 };
