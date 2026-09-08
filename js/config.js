@@ -12,7 +12,7 @@ export const CONFIG = {
   repo: 'apel-festival',
   urlPublique: 'https://kripskroll.github.io/apel-festival/',
   // Version de l'appli : change à chaque déploiement (bin/deploy.sh), pilote le cache du service worker.
-  version: '2026.09.08-f77204e',
+  version: '2026.09.08-c667d9f',
   // Rafraîchissement des données (ms) et envoi des mesures (ms).
   // intervalleStats est à 180 s, pas 30 : le test de charge du 2026-09-08 a mesuré
   // que l'écriture de l'onglet Stats plafonne vers 2,2 requêtes par seconde (le
