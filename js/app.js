@@ -194,7 +194,9 @@ document.addEventListener('click', (e) => {
     case 'retirer': e.preventDefault(); modifierVisite(Visite.retirer(etat.visite, cle)); break;
     case 'effacer': etat.ui[champ] = ''; if (champ === 'recherchePlan') etat.ui.salleAllumee = null; rendre({ conserver: true }); el.main.querySelector(`[data-champ="${champ}"]`)?.focus(); break;
     case 'filtre': etat.ui[filtre] = etat.ui[filtre] === valeur && filtre !== 'filtrePublic' ? '' : valeur; rendre({ conserver: true }); break;
-    case 'onglet': etat.ui.ongletExposants = valeur; etat.ui.filtreSecteurExposants = ''; rendre({ conserver: true }); break;
+    // Changer d'onglet garde le Secteur : il traverse les onglets (voir ecranExposants),
+    // et le compte affiché sur chaque onglet dit déjà combien on y trouvera.
+    case 'onglet': etat.ui.ongletExposants = valeur; rendre({ conserver: true }); break;
     case 'zone': etat.ui.zoneOuverte = etat.ui.zoneOuverte === valeur ? null : valeur; etat.ui.salleAllumee = null; etat.ui.recherchePlan = ''; rendre({ conserver: true }); break;
     case 'salle': etat.ui.salleAllumee = valeur; etat.ui.recherchePlan = ''; etat.ui.zoneOuverte = null; planTransform.centrerSur = valeur; rendre({ conserver: true }); break;
     case 'zoom': zoomerPlan(Number(valeur) > 0 ? 1.4 : 1 / 1.4); break;
@@ -414,7 +416,11 @@ function envoyerStatsEnArrierePlan() {
   const ok = navigator.sendBeacon(urlAction(CONFIG.scriptUrl, 'stats'), new Blob([JSON.stringify(salve)], { type: 'text/plain;charset=utf-8' }));
   if (!ok) stats.remettre(salve);
 }
-setInterval(() => { stats.vider().catch(() => {}); }, CONFIG.intervalleStats);
+// Comme le rafraîchisseur de données, on n'appelle pas le réseau depuis un
+// téléphone rangé dans une poche : ce qui reste en file partira au retour au
+// premier plan, ou par sendBeacon au passage en arrière-plan. Sous la charge
+// mesurée par ADR-0006, chaque requête évitée est un créneau d'exécution rendu.
+setInterval(() => { if (document.visibilityState === 'visible') stats.vider().catch(() => {}); }, CONFIG.intervalleStats);
 
 // ---------------------------------------------------------------- service worker et nouvelle version
 

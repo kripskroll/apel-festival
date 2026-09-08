@@ -221,6 +221,10 @@ main { min-height: 60vh; }
   color: var(--encre-2); border-bottom: 3px solid transparent;
 }
 .onglet[aria-selected="true"] { color: var(--encre); border-bottom-color: var(--orange); }
+/* Le compte n'apparaît que lorsqu'un Secteur est filtré : il dit où sont les
+   autres Exposants du Secteur, au lieu de laisser un onglet vide sans explication. */
+.onglet .compte { font-size: 0.78rem; font-weight: 700; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.onglet[aria-selected="true"] .compte { color: var(--orange); opacity: 1; }
 
 /* ------------------------------------------------------------ listes */
 

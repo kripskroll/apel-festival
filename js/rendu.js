@@ -24,7 +24,7 @@ const NOM_SECTEUR_COURT = {
 };
 // Sur le plan, les points d'intérêt portent un mot, pas un pictogramme : c'est
 // ce qui reste lisible sur un écran de six centimètres.
-const MOT_POINT = { Accueil: 'Accueil', Toilettes: 'WC', Foodtruck: 'Café' };
+const MOT_POINT = { Accueil: 'Accueil', Toilettes: 'WC', Foodtruck: 'Café', Auditorium: 'Confs' };
 export const secteurCourt = (s) => NOM_SECTEUR_COURT[s] || s;
 
 function etoile(etat, objet, libelle) {
@@ -256,13 +256,24 @@ export function filtrerExposants(modele, ui, type) {
 export function ecranExposants(etat) {
   const { modele, ui } = etat;
   const types = typesPresents(modele);
-  const type = types.includes(ui.ongletExposants) ? ui.ongletExposants : types[0] || null;
+  // Les onglets sont la taxonomie des Organisateurs ; un Secteur est la question
+  // du Visiteur. Le filtre traverse donc les onglets : si celui qu'on affiche n'a
+  // personne dans le Secteur choisi, on ouvre le premier qui en a. Sans cela,
+  // « Par où commencer ? » envoie sur une liste vide dès qu'un Secteur n'est porté
+  // que par des Pros ou des Entreprises.
+  const demande = types.includes(ui.ongletExposants) ? ui.ongletExposants : types[0] || null;
+  const compte = (t) => filtrerExposants(modele, ui, t).length;
+  const type = ui.filtreSecteurExposants && demande && compte(demande) === 0
+    ? (types.find((t) => compte(t) > 0) || demande)
+    : demande;
   const liste = filtrerExposants(modele, ui, type);
-  const secteurs = new Set(modele.exposants.filter((e) => !type || e.type === type).map((e) => e.secteur).filter(Boolean));
+  // Les Secteurs proposés viennent de TOUS les Exposants, pas du seul onglet :
+  // autrement le filtre actif disparaît de l'écran et devient impossible à annuler.
+  const secteurs = new Set(modele.exposants.map((e) => e.secteur).filter(Boolean));
   const total = modele.exposants.length;
   return `${entete('Les exposants', total ? `${total} à rencontrer, répartis dans le lycée` : '')}
   ${types.length > 1 ? `<div class="onglets" role="tablist" aria-label="Type d'exposant">
-    ${types.map((t) => `<button class="onglet" type="button" role="tab" id="onglet-${attr(normaliser(t))}" aria-selected="${t === type}" data-action="onglet" data-valeur="${attr(t)}">${h(PLURIEL_TYPE[t])}</button>`).join('')}
+    ${types.map((t) => { const n = ui.filtreSecteurExposants ? compte(t) : null; return `<button class="onglet" type="button" role="tab" id="onglet-${attr(normaliser(t))}" aria-selected="${t === type}" data-action="onglet" data-valeur="${attr(t)}">${h(PLURIEL_TYPE[t])}${n === null ? '' : ` <span class="compte">${n}</span>`}</button>`; }).join('')}
   </div>` : ''}
   ${champRecherche('rechercheExposants', ui.rechercheExposants, type === 'Pro' ? 'Un métier, un nom, une entreprise' : 'Une école, une formation, une ville')}
   ${filtresSecteur('filtreSecteurExposants', ui.filtreSecteurExposants, secteurs)}
